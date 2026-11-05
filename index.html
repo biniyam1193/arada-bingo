@@ -45,6 +45,27 @@
     </footer>
 
     <script>
+        // Web Audio API ለድምፅ ማመንጫ (Beep Sound)
+        function playCallSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(600, audioCtx.currentTime); // የድምፁ ከፍታ
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.15); // የድምፁ ቆይታ (ጊዜ)
+            } catch (e) {
+                console.log("Audio not supported or blocked", e);
+            }
+        }
+
         // Master Board Generation (1-75)
         const masterGrid = document.getElementById('masterGrid');
         for (let i = 1; i <= 75; i++) {
@@ -68,10 +89,14 @@
             playerCard.appendChild(cell);
         });
 
-        // Simulate a random call for testing
+        // Simulate a random call for testing with Sound
         setInterval(() => {
             const randomNum = Math.floor(Math.random() * 75) + 1;
             document.getElementById('currentCallDisplay').innerText = randomNum;
+            
+            // ቁጥር ሲጠራ ድምፅ እንዲያሰማ ፉንክሽኑን መጥራት
+            playCallSound();
+
             const mCell = document.getElementById(`m-${randomNum}`);
             if(mCell) mCell.classList.add('bg-yellow-500', 'text-slate-900', 'font-bold');
         }, 5000);
