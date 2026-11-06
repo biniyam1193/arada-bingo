@@ -76,4 +76,30 @@
             masterGrid.appendChild(cell);
         }
 
+        // Simple Player Card Mock
+        const playerCard = document.getElementById('playerCard');
+        const sampleNumbers = [12, 25, 38, 44, 60, 5, 18, 'FREE', 50, 71, 9, 22, 31, 49, 65, 3, 20, 39, 52, 68, 15, 27, 40, 55, 73];
+        sampleNumbers.forEach((num, index) => {
+            const cell = document.createElement('div');
+            cell.className = `p-3 bg-slate-700 rounded-lg text-center font-bold text-sm bingo-cell ${num === 'FREE' ? 'marked' : ''}`;
+            cell.innerText = num;
+            if(num !== 'FREE') {
+                cell.onclick = () => cell.classList.toggle('marked');
+            }
+            playerCard.appendChild(cell);
+        });
 
+        // Simulate a random call for testing with Sound
+        setInterval(() => {
+            const randomNum = Math.floor(Math.random() * 75) + 1;
+            document.getElementById('currentCallDisplay').innerText = randomNum;
+            
+            // ቁጥር ሲጠራ ድምፅ እንዲያሰማ ፉንክሽኑን መጥራት
+            playCallSound();
+
+            const mCell = document.getElementById(`m-${randomNum}`);
+            if(mCell) mCell.classList.add('bg-yellow-500', 'text-slate-900', 'font-bold');
+        }, 5000);
+    </script>
+</body>
+</html>
