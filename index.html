@@ -1,105 +1,292 @@
 <!DOCTYPE html>
 <html lang="am">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Bingo - አራዳ ቢንጎ</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
-        body { font-family: 'Poppins', sans-serif; background-color: #0d1b2a; color: #ffffff; }
-        .bingo-cell { transition: all 0.2s ease; }
-        .bingo-cell.marked { background: linear-gradient(135deg, #2ec4b6, #20bf6b); color: white; transform: scale(0.95); font-weight: bold; box-shadow: 0 0 10px rgba(46, 196, 182, 0.5); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SMART BINGO - አራዳ ቢንጎ</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+*{box-sizing:border-box}
+body{background:#0d1b2a;color:white;font-family:Arial,sans-serif}
+.bingo-cell{padding:12px 2px;background:#334155;border-radius:7px;font-weight:bold;min-width:0}
+.bingo-cell.marked{background:#20bf6b;color:white}
+.master-cell{padding:5px 1px;background:#334155;border-radius:4px;font-size:11px}
+.master-cell.called{background:#eab308;color:#111827;font-weight:bold}
+button{cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+</style>
 </head>
-<body class="flex flex-col min-h-screen p-4 max-w-md mx-auto">
-    <header class="text-center my-4">
-        <h1 class="text-3xl font-bold text-yellow-400 tracking-wider">🎯 SMART BINGO</h1>
-        <p class="text-xs text-gray-300">አራዳ ቢንጎ - የሞባይል ጨዋታ</p>
-    </header>
+<body class="min-h-screen p-3 max-w-lg mx-auto">
+<header class="text-center py-4">
+<h1 class="text-3xl font-bold text-yellow-400">🎯 SMART BINGO</h1>
+<p class="text-gray-300 text-sm">አራዳ ቢንጎ</p>
+</header>
+<div id="message" class="text-center text-sm text-yellow-300 mb-3" role="status"></div>
 
-    <main class="flex-1 flex flex-col gap-4">
-        <div class="bg-slate-800 p-4 rounded-xl border border-yellow-500/30 text-center shadow-lg">
-            <span class="text-sm text-yellow-400 uppercase tracking-widest">የተጠራው ቁጥር (Current Call)</span>
-            <div id="currentCallDisplay" class="text-5xl font-extrabold text-white my-2">-</div>
-        </div>
+<section id="login" class="bg-slate-800 p-4 rounded-xl space-y-3">
+<h2 class="text-xl text-yellow-400 font-bold text-center">Admin መግቢያ</h2>
+<input id="email" type="email" autocomplete="username" placeholder="Admin Email" class="w-full p-3 rounded text-black">
+<input id="password" type="password" autocomplete="current-password" placeholder="Admin Password" class="w-full p-3 rounded text-black">
+<button id="adminLoginBtn" class="w-full bg-yellow-500 text-black font-bold p-3 rounded">Admin Login</button>
+<hr class="border-slate-600">
+<h3 class="font-bold text-center">ተጫዋች መግቢያ</h3>
+<input id="playerName" maxlength="30" placeholder="የተጫዋች ስም" class="w-full p-3 rounded text-black">
+<input id="roomInput" maxlength="10" placeholder="Room Code" class="w-full p-3 rounded text-black uppercase">
+<button id="joinBtn" class="w-full bg-green-600 font-bold p-3 rounded">Join Game</button>
+</section>
 
-        <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
-            <div class="text-xs font-semibold text-gray-400 mb-2">የዋና ሰሌዳ ቁጥሮች (Master Board 1-75)</div>
-            <div id="masterGrid" class="grid grid-cols-10 gap-1 text-center text-xs"></div>
-        </div>
+<section id="game" class="hidden space-y-4">
+<div class="bg-slate-800 p-4 rounded-xl text-center">
+<p class="text-yellow-400 text-sm">ROOM CODE</p>
+<div id="roomCode" class="text-2xl font-bold">------</div>
+<p id="gameStatus" class="text-sm text-green-400 mt-2"></p>
+</div>
 
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center">
-            <div class="flex justify-between items-center mb-2">
-                <span class="text-sm font-bold text-yellow-400">የእርስዎ ካርቴላ (Cartela #1)</span>
-                <button onclick="alert('አዲስ ካርቴላ ተመርጧል!')" class="bg-yellow-500 text-slate-900 text-xs px-2 py-1 rounded font-bold">ቀይር</button>
-            </div>
-            <div id="playerCard" class="grid grid-cols-5 gap-2"></div>
-        </div>
-    </main>
+<div id="adminPanel" class="hidden bg-slate-800 p-4 rounded-xl space-y-3">
+<h2 class="text-yellow-400 font-bold">ADMIN CONTROL</h2>
+<button id="createRoomBtn" class="w-full bg-blue-600 p-3 rounded font-bold">➕ Create New Room</button>
+<button id="startBtn" class="w-full bg-green-600 p-3 rounded font-bold">▶ START GAME</button>
+<button id="callBtn" class="w-full bg-yellow-500 text-black p-3 rounded font-bold">📢 CALL NEXT NUMBER</button>
+<button id="pauseBtn" class="w-full bg-orange-500 p-3 rounded font-bold">⏸ PAUSE</button>
+<button id="resetBtn" class="w-full bg-red-600 p-3 rounded font-bold">RESET GAME</button>
+<div class="border-t border-slate-600 pt-3">
+<h3 class="font-bold text-yellow-400">Players</h3>
+<div id="playersList" class="text-sm mt-2"></div>
+</div>
+</div>
 
-    <footer class="mt-4 text-center">
-        <button onclick="alert('ቢንጎ! አሸናፊዎትን እያረጋገጠ ነው...')" class="w-full bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 font-bold py-3 rounded-xl shadow-lg text-lg">
-            🎉 BINGO! (አሸነፍኩ)
-        </button>
-    </footer>
+<div class="bg-slate-800 p-4 rounded-xl text-center">
+<p class="text-yellow-400">የተጠራው ቁጥር</p>
+<div id="currentCall" class="text-5xl font-bold my-3">-</div>
+</div>
 
-    <script>
-        // Web Audio API ለድምፅ ማመንጫ (Beep Sound)
-        function playCallSound() {
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
+<div class="bg-slate-800 p-3 rounded-xl">
+<p class="text-yellow-400 text-sm mb-2">MASTER BOARD (1-75)</p>
+<div id="masterGrid" class="grid grid-cols-10 gap-1"></div>
+</div>
 
-                oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(600, audioCtx.currentTime); // የድምፁ ከፍታ
-                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+<div id="playerArea" class="bg-slate-800 p-4 rounded-xl">
+<h3 class="text-yellow-400 font-bold text-center mb-3">የእርስዎ CARTELA</h3>
+<div class="grid grid-cols-5 gap-2 text-center mb-2 font-bold text-yellow-400">
+<div>B</div><div>I</div><div>N</div><div>G</div><div>O</div>
+</div>
+<div id="playerCard" class="grid grid-cols-5 gap-2 text-center"></div>
+<button id="claimBtn" class="w-full bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-bold p-3 rounded-xl mt-4">🎉 BINGO!</button>
+<div id="bingoMessage" class="text-center text-green-400 mt-3"></div>
+</div>
+<div class="text-center"><button id="logoutBtn" class="bg-red-700 px-5 py-2 rounded">Logout</button></div>
+</section>
 
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCpQVfVwK0F3oRlTeUGaxM30KnxTJExAI8",
+  authDomain: "arada-bingo-8f1f9.firebaseapp.com",
+  databaseURL: "https://arada-bingo-8f1f9-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "arada-bingo-8f1f9",
+  storageBucket: "arada-bingo-8f1f9.firebasestorage.app",
+  messagingSenderId: "367791923776",
+  appId: "1:367791923776:web:2b49837118f0de959e75a5"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+const ADMIN_UID = "pqkVCpJeCOTpfaHTZtgqJvqkq6M2";
 
-                oscillator.start();
-                oscillator.stop(audioCtx.currentTime + 0.15); // የድምፁ ቆይታ (ጊዜ)
-            } catch (e) {
-                console.log("Audio not supported or blocked", e);
-            }
-        }
+let user=null, isAdmin=false, room=null, roomData=null, roomListener=null, playerCard=[];
+const $ = id => document.getElementById(id);
+const say = t => $("message").textContent=t;
 
-        // Master Board Generation (1-75)
-        const masterGrid = document.getElementById('masterGrid');
-        for (let i = 1; i <= 75; i++) {
-            const cell = document.createElement('div');
-            cell.id = `m-${i}`;
-            cell.className = 'bg-slate-700/50 py-1 rounded text-gray-300';
-            cell.innerText = i;
-            masterGrid.appendChild(cell);
-        }
-
-        // Simple Player Card Mock
-        const playerCard = document.getElementById('playerCard');
-        const sampleNumbers = [12, 25, 38, 44, 60, 5, 18, 'FREE', 50, 71, 9, 22, 31, 49, 65, 3, 20, 39, 52, 68, 15, 27, 40, 55, 73];
-        sampleNumbers.forEach((num, index) => {
-            const cell = document.createElement('div');
-            cell.className = `p-3 bg-slate-700 rounded-lg text-center font-bold text-sm bingo-cell ${num === 'FREE' ? 'marked' : ''}`;
-            cell.innerText = num;
-            if(num !== 'FREE') {
-                cell.onclick = () => cell.classList.toggle('marked');
-            }
-            playerCard.appendChild(cell);
-        });
-
-        // Simulate a random call for testing with Sound
-        setInterval(() => {
-            const randomNum = Math.floor(Math.random() * 75) + 1;
-            document.getElementById('currentCallDisplay').innerText = randomNum;
-            
-            // ቁጥር ሲጠራ ድምፅ እንዲያሰማ ፉንክሽኑን መጥራት
-            playCallSound();
-
-            const mCell = document.getElementById(`m-${randomNum}`);
-            if(mCell) mCell.classList.add('bg-yellow-500', 'text-slate-900', 'font-bold');
-        }, 5000);
-    </script>
+function makeCard(){
+  const ranges=[[1,15],[16,30],[31,45],[46,60],[61,75]];
+  const card=Array(25);
+  ranges.forEach((range,col)=>{
+    const nums=[];
+    while(nums.length<5){
+      const n=Math.floor(Math.random()*(range[1]-range[0]+1))+range[0];
+      if(!nums.includes(n)) nums.push(n);
+    }
+    nums.forEach((n,row)=>card[row*5+col]=n);
+  });
+  card[12]="FREE";
+  return card;
+}
+function letter(n){return n<=15?"B":n<=30?"I":n<=45?"N":n<=60?"G":"O";}
+function playSound(){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const osc=ctx.createOscillator(), gain=ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value=600; gain.gain.value=.1;
+    osc.start(); osc.stop(ctx.currentTime+.15);
+    osc.onended=()=>ctx.close();
+  }catch(e){}
+}
+for(let i=1;i<=75;i++){
+  const cell=document.createElement("div");
+  cell.id="m-"+i; cell.className="master-cell text-center";
+  cell.textContent=i; $("masterGrid").appendChild(cell);
+}
+function showGame(){
+  $("login").classList.add("hidden");
+  $("game").classList.remove("hidden");
+  $("adminPanel").classList.toggle("hidden",!isAdmin);
+  $("playerArea").classList.toggle("hidden",isAdmin);
+}
+async function adminLogin(){
+  try{
+    const email=$("email").value.trim(), password=$("password").value;
+    if(!email||!password){say("Email እና Password አስገባ");return;}
+    const result=await auth.signInWithEmailAndPassword(email,password);
+    if(result.user.uid!==ADMIN_UID){
+      await auth.signOut(); say("ይህ Admin መለያ አይደለም"); return;
+    }
+    user=result.user; isAdmin=true; showGame(); say("Admin በትክክል ገብተሃል");
+  }catch(e){say("Login Error: "+e.message);}
+}
+async function createRoom(){
+  if(!isAdmin||!user){say("Admin ብቻ ነው Room መፍጠር የሚችለው");return;}
+  try{
+    const code=Math.random().toString(36).slice(2,8).toUpperCase();
+    await db.ref("rooms/"+code).set({
+      adminUid:user.uid,status:"waiting",calledNumbers:[],
+      createdAt:firebase.database.ServerValue.TIMESTAMP,winner:null,players:{}
+    });
+    room=code; listenRoom(); say("Room ተፈጥሯል። Code: "+code);
+  }catch(e){say("Room Error: "+e.message);}
+}
+async function joinRoom(){
+  try{
+    const name=$("playerName").value.trim();
+    const code=$("roomInput").value.trim().toUpperCase();
+    if(!name||!code){say("ስም እና Room Code አስገባ");return;}
+    if(name.length>30){say("ስም ከ30 ፊደል መብለጥ የለበትም");return;}
+    const result=await auth.signInAnonymously();
+    user=result.user; isAdmin=false;
+    const roomRef=db.ref("rooms/"+code);
+    const snap=await roomRef.once("value");
+    if(!snap.exists()){await auth.signOut();say("Room Code አልተገኘም");return;}
+    const data=snap.val();
+    if(data.status==="finished"){await auth.signOut();say("ይህ ጨዋታ ተጠናቋል");return;}
+    room=code;
+    const playerRef=roomRef.child("players/"+user.uid);
+    const old=await playerRef.once("value");
+    playerCard=(old.exists()&&Array.isArray(old.val().card))?old.val().card:makeCard();
+    await playerRef.update({name,card:playerCard,joinedAt:firebase.database.ServerValue.TIMESTAMP,bingoClaim:false});
+    showGame(); listenRoom(); say("ወደ ጨዋታው ገብተሃል!");
+  }catch(e){say("Join Error: "+e.message);}
+}
+function hasBingo(card,called){
+  if(!Array.isArray(card)||card.length!==25)return false;
+  const lines=[];
+  for(let r=0;r<5;r++)lines.push([0,1,2,3,4].map(c=>r*5+c));
+  for(let c=0;c<5;c++)lines.push([0,1,2,3,4].map(r=>r*5+c));
+  lines.push([0,6,12,18,24],[4,8,12,16,20]);
+  return lines.some(line=>line.every(i=>card[i]==="FREE"||called.includes(card[i])));
+}
+function renderCard(called=[]){
+  if(!playerCard.length)return;
+  $("playerCard").innerHTML="";
+  playerCard.forEach(num=>{
+    const cell=document.createElement("div");
+    cell.className="bingo-cell";
+    if(num==="FREE"||called.includes(num))cell.classList.add("marked");
+    cell.textContent=num; $("playerCard").appendChild(cell);
+  });
+}
+function renderPlayers(players){
+  const list=$("playersList"); list.innerHTML="";
+  Object.entries(players||{}).forEach(([uid,p])=>{
+    const item=document.createElement("div");
+    item.className="border-b border-slate-600 py-3 flex justify-between items-center";
+    const name=document.createElement("span"); name.textContent=p.name||"Player";
+    const status=document.createElement("span");
+    if(p.bingoClaim&&hasBingo(p.card||[],roomData.calledNumbers||[])){
+      status.textContent="🏆 BINGO";status.className="text-green-400 font-bold";
+    }else if(p.bingoClaim){
+      status.textContent="❌ Invalid";status.className="text-red-400 font-bold";
+    }else{
+      status.textContent="🟢 Playing";status.className="text-gray-300";
+    }
+    item.append(name,status);list.appendChild(item);
+  });
+  if(!Object.keys(players||{}).length)list.textContent="እስካሁን ማንም አልገባም";
+}
+function listenRoom(){
+  if(!room)return;
+  if(roomListener)db.ref("rooms/"+room).off("value",roomListener);
+  roomListener=snap=>{
+    roomData=snap.val();
+    if(!roomData){say("Room ተሰርዟል");return;}
+    $("roomCode").textContent=room;
+    $("gameStatus").textContent=(roomData.status||"waiting").toUpperCase();
+    const called=roomData.calledNumbers||[];
+    $("currentCall").textContent=called.length?letter(called[called.length-1])+" - "+called[called.length-1]:"-";
+    for(let i=1;i<=75;i++)$("m-"+i).classList.toggle("called",called.includes(i));
+    if(!isAdmin)renderCard(called);
+    else renderPlayers(roomData.players||{});
+    $("startBtn").disabled=roomData.status==="playing";
+    $("callBtn").disabled=roomData.status!=="playing"||called.length>=75;
+  };
+  db.ref("rooms/"+room).on("value",roomListener);
+}
+async function startGame(){
+  if(!isAdmin||!room)return;
+  try{await db.ref("rooms/"+room).update({status:"playing"});say("ጨዋታው ተጀምሯል");}
+  catch(e){say(e.message);}
+}
+async function callNumber(){
+  if(!isAdmin||!room||!roomData)return;
+  if(roomData.status!=="playing"){say("መጀመሪያ START GAME ይጫኑ");return;}
+  const called=roomData.calledNumbers||[];
+  const remaining=Array.from({length:75},(_,i)=>i+1).filter(n=>!called.includes(n));
+  if(!remaining.length){say("ሁሉም ቁጥሮች ተጠርተዋል");return;}
+  const next=remaining[Math.floor(Math.random()*remaining.length)];
+  try{await db.ref("rooms/"+room).update({calledNumbers:[...called,next]});playSound();}
+  catch(e){say("Number Error: "+e.message);}
+}
+async function pauseGame(){
+  if(!isAdmin||!room)return;
+  try{await db.ref("rooms/"+room).update({status:"paused"});}
+  catch(e){say(e.message);}
+}
+async function resetGame(){
+  if(!isAdmin||!room)return;
+  if(!confirm("ጨዋታውን RESET ማድረግ ይፈልጋሉ?"))return;
+  try{
+    const players=roomData.players||{}, updates={};
+    Object.keys(players).forEach(uid=>updates["players/"+uid+"/bingoClaim"]=false);
+    updates.status="waiting";updates.calledNumbers=[];updates.winner=null;
+    await db.ref("rooms/"+room).update(updates);$("bingoMessage").textContent="";
+  }catch(e){say(e.message);}
+}
+async function claimBingo(){
+  if(isAdmin||!room||!roomData||!user)return;
+  const called=roomData.calledNumbers||[];
+  if(roomData.status!=="playing"||!hasBingo(playerCard,called)){
+    $("bingoMessage").textContent="እስካሁን BINGO አልሆነም።";return;
+  }
+  try{
+    await db.ref("rooms/"+room+"/players/"+user.uid).update({bingoClaim:true});
+    $("bingoMessage").textContent="BINGO ጥያቄ ተልኳል! Admin ይመልከት።";
+  }catch(e){$("bingoMessage").textContent="Error: "+e.message;}
+}
+async function logout(){
+  if(room&&roomListener)db.ref("rooms/"+room).off("value",roomListener);
+  try{await auth.signOut();}finally{location.reload();}
+}
+$("adminLoginBtn").addEventListener("click",adminLogin);
+$("joinBtn").addEventListener("click",joinRoom);
+$("createRoomBtn").addEventListener("click",createRoom);
+$("startBtn").addEventListener("click",startGame);
+$("callBtn").addEventListener("click",callNumber);
+$("pauseBtn").addEventListener("click",pauseGame);
+$("resetBtn").addEventListener("click",resetGame);
+$("claimBtn").addEventListener("click",claimBingo);
+$("logoutBtn").addEventListener("click",logout);
+$("roomInput").addEventListener("input",e=>e.target.value=e.target.value.toUpperCase());
+</script>
 </body>
 </html>
