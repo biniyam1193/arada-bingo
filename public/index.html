@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Classic Bingo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="bg-purple-200 min-h-screen text-gray-800 font-sans">
+    <div class="max-w-md mx-auto p-4">
+        <!-- Header / Top Stats -->
+        <div class="flex justify-between bg-white rounded-lg p-3 shadow-md mb-4 text-center">
+            <div>
+                <p class="text-xs text-gray-500 font-bold">Players</p>
+                <p id="player-count" class="text-lg font-bold text-purple-700">130</p>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500 font-bold">Wallet</p>
+                <p id="wallet-amount" class="text-lg font-bold text-purple-700">0</p>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500 font-bold">Bet</p>
+                <p class="text-lg font-bold text-purple-700">10</p>
+            </div>
+        </div>
+
+        <!-- Room & Status info -->
+        <div class="bg-white rounded-lg p-4 shadow-md mb-4 text-center">
+            <h1 class="text-xl font-black text-purple-900 tracking-wider">SMART CLASSIC BINGO</h1>
+            <p class="text-sm text-gray-600 mt-1">Room Code: <span id="room-code-display" class="font-bold text-purple-700">-</span></p>
+            <p id="game-status" class="text-xs font-bold mt-2 px-2 py-1 bg-yellow-100 text-yellow-800 rounded inline-block">WAITING</p>
+        </div>
+
+        <!-- Current Call Display -->
+        <div class="bg-purple-700 text-white rounded-2xl p-4 shadow-lg mb-4 flex items-center justify-between">
+            <div>
+                <p class="text-xs uppercase tracking-wider text-purple-200">Current Call</p>
+                <h2 id="current-call-number" class="text-3xl font-black mt-1">-</h2>
+            </div>
+            <div class="bg-purple-900 px-4 py-2 rounded-xl text-center">
+                <span class="text-xs text-purple-300 block">Call Count</span>
+                <span id="call-count" class="text-lg font-bold">0</span>
+            </div>
+        </div>
+
+        <!-- Admin Control Panel (Visible for Admin) -->
+        <div class="bg-white rounded-lg p-4 shadow-md mb-4">
+            <h3 class="text-sm font-bold text-gray-700 mb-3 border-b pb-1">ADMIN CONTROL PANEL</h3>
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="createRoom()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-3 rounded shadow">Create Room</button>
+                <button onclick="startGame()" class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-2 px-3 rounded shadow">Start Game</button>
+                <button onclick="callNumber()" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-2 px-3 rounded shadow">Call Next</button>
+                <button onclick="pauseGame()" class="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold py-2 px-3 rounded shadow">Pause</button>
+            </div>
+            <button onclick="resetGame()" class="w-full mt-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 rounded shadow">Reset Game</button>
+        </div>
+
+        <!-- Notification Message -->
+        <div class="bg-white rounded-lg p-4 shadow-md text-center">
+            <p class="text-purple-900 font-bold">Dear Biniyam,</p>
+            <p class="text-sm text-gray-600 mt-1">Please wait for this game to be completed or controlled from above.</p>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+
+        socket.on('game-state', (state) => {
+            document.getElementById('room-code-display').innerText = state.roomCode;
+            document.getElementById('current-call-number').innerText = state.currentNumber;
+            document.getElementById('game-status').innerText = state.status;
+            document.getElementById('call-count').innerText = state.calledNumbers.length;
+        });
+
+        socket.on('number-called', (num) => {
+            document.getElementById('current-call-number').innerText = num;
+        });
+
+        function createRoom() { socket.emit('create-room'); }
+        function startGame() { socket.emit('start-game'); }
+        function callNumber() { socket.emit('call-number'); }
+        function pauseGame() { socket.emit('pause-game'); }
+        function resetGame() { socket.emit('reset-game'); }
+    </script>
+</body>
+</html>
+

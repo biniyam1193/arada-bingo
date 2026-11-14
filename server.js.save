@@ -1,0 +1,73 @@
+const express = require('express');
+const { Telegraf, Markup } = require('telegraf');
+const path = require('path');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// የቦቱን ቶከን እዚህ ነጠላ ሰረዞች መሃል ያስገቡ
+const BOT_TOKEN = '8507897804:AAEup4FnA02AhOpeaoLxXYE3-LOFhXnKMKg';
+const bot = new Telegraf(BOT_TOKEN);
+
+let gameState = {
+    playersCount: 110,
+    betAmount: 10,
+    derash: 880,
+    currentCall: 'G-58',
+    callCount: 8,
+    calledNumbers: [27, 20, 58],
+    recentCalls: ['I-27', 'I-20', 'G-58']
+};
+
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/api/game-status', (req, res) => {
+    res.json(gameState);
+});
+
+bot.start((ctx) => {
+    const userName = ctx.from.first_name || 'ተጫዋች';
+    ctx.reply(
+        `ሰላም ${userName}! ወደ Smart Bingo (@Smartbingo1193_bot) እንኳን ደህና መጡ።\n\n` +
+        `አሁን እየተካሄደ ያለውን ጨዋታ ለመቀላቀል ከታች ያለውን ቁልፍ ይጫኑ።`,
+        Markup.inlineKeyboard([
+            [Markup.button.webApp('🚀 አራዳ ቢንጎ ክፈት', 'https://your-domain.com/index.html')],
+            [Markup.button.callback('📊 የጨዋታ ሁኔታ', 'status')]
+        ])
+    );
+});
+
+bot.action('status', async (ctx) => {
+    await ctx.answerCbQuery();
+    await ctx.reply(
+        `📊 **የአሁን የጨዋታ መረጃ**\n\n` +
+        `👥 ተጫዋቾች: ${gameState.playersCount}\n` +
+        `💵 ደራሽ: ${gameState.derash} ብር\n` +
+        `🎲 ውርርድ (Bet): ${gameState.betAmount} ብር\n` +
+        `🔢 አሁን የጠራው: ${gameState.currentCall}`
+    );
+});
+
+bot.launch();
+console.log('Telegram Bot is running...');
+
+app.listen(PORT, () => {
+    console.log(`Smart Bingo Server is running on port ${PORT}`);
+});
+
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
+
+node server.js
+node server.js
+
+
+
+
+
+
+
+
+
+
