@@ -80,7 +80,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 </div>
 </div>
 
-<!-- Live Game Layout -->
+<!-- Live Game Layout (Visible to both Admin & Players) -->
 <div class="grid grid-cols-12 gap-2">
 <div class="col-span-7 bg-white p-2 rounded-2xl shadow">
 <div class="grid grid-cols-5 gap-1 text-center text-[10px] font-bold text-white mb-1">
@@ -112,7 +112,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
         <div id="recent-3" class="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center text-[10px] font-bold shadow">--</div>
     </div>
 
-    <!-- Auto Mode Switch -->
+    <!-- Auto Mode Switch (Admin only control, or viewable) -->
     <div class="flex items-center justify-between w-full mt-2 bg-purple-900/70 px-3 py-2 rounded-xl">
         <span class="text-xs font-medium">Auto</span>
         <label class="relative inline-flex items-center cursor-pointer">
@@ -128,7 +128,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 </div>
 </div>
 
-<!-- Player Area / Cartela -->
+<!-- Player Area / Cartela (Shown only to Players) -->
 <div id="playerArea" class="bg-white p-4 rounded-2xl shadow">
 <h3 class="text-purple-900 font-bold text-center text-sm mb-2">የእርስዎ CARTELA</h3>
 <div class="grid grid-cols-5 gap-1 text-center mb-2 font-bold text-xs text-white">
@@ -208,8 +208,16 @@ function showGame(){
   $("login").classList.add("hidden");
   $("game").classList.remove("hidden");
   $("adminPanel").classList.toggle("hidden",!isAdmin);
+  // አሁን Master Grid እና Current Call ለሁለቱም ይታያሉ፣ Cartela ግን ለአድሚን አይታይም (ተጫዋች ብቻ ነው የሚኖረው)
   $("playerArea").classList.toggle("hidden",isAdmin);
+  // አድሚን ያልሆነ ተጫዋች አውቶማቲክ ማብሪያውን እንዳይለውጠው ማስተካከል ከፈለግን
+  if(isAdmin) {
+    $("autoToggle").disabled = false;
+  } else {
+    $("autoToggle").disabled = true; // ተጫዋቾች ማየት ብቻ እንዲችሉ
+  }
 }
+
 async function adminLogin(){
   try{
     const email=$("email").value.trim(), password=$("password").value;
@@ -320,8 +328,12 @@ function listenRoom(){
     }
     if(!isAdmin)renderCard(called);
     else renderPlayers(roomData.players||{});
-    $("startBtn").disabled=roomData.status==="playing";
-    $("callBtn").disabled=roomData.status!=="playing"||called.length>=75;
+    
+    // Admin controls availability
+    if(isAdmin){
+      $("startBtn").disabled=roomData.status==="playing";
+      $("callBtn").disabled=roomData.status!=="playing"||called.length>=75;
+    }
 
     if(isAdmin && roomData.status==="playing" && $("autoToggle").checked){
       if(!autoInterval) startAutoCall();
