@@ -2,350 +2,61 @@
 <html lang="am">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Arada Classic Bingo - አራዳ ቢንጎ</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10/firebase-firestore.js"></script>
 <style>
 *{box-sizing:border-box}
-body{background:#f3e8ff;color:#1e1b4b;font-family:Arial,sans-serif}
-.bingo-cell{padding:12px 2px;background:#e2e8f0;border-radius:7px;font-weight:bold;min-width:0;color:#334155;border:1px solid #cbd5e1}
-.bingo-cell.marked{background:#f97316;color:white;border-color:#ea580c}
-.master-cell{padding:6px 2px;background:#e2e8f0;border-radius:4px;font-size:11px;color:#334155;font-weight:bold}
+body{background:#f3e8ff;color:#1e1b4b;font-family:sans-serif}
+.bingo-cell{padding:12px 2px;background:#e2e8f0;border-radius:6px;text-align:center;font-weight:bold}
+.bingo-cell.marked{background:#f97316;color:white}
+.master-cell{padding:6px 2px;background:#e2e8f0;border-radius:4px;text-align:center;font-size:12px;font-weight:bold}
 .master-cell.called{background:#f97316;color:white}
 .master-cell.latest{background:#22c55e;color:white}
 button{cursor:pointer}
 button:disabled{opacity:.5;cursor:not-allowed}
 </style>
 </head>
-<body class="min-h-screen p-2 max-w-md mx-auto">
+<body class="p-4 flex flex-col items-center min-h-screen">
 
-<!-- Header -->
-<header class="flex justify-between items-center py-3 px-2 bg-white shadow rounded-xl mb-3">
-<div class="font-bold text-lg text-slate-800">Arada Classic Bingo</div>
-<div id="message" class="text-xs text-purple-700 font-semibold" role="status"></div>
-</header>
+    <h1 class="text-2xl font-bold mb-4 text-purple-900">አራዳ ቢንጎ (Arada Bingo)</h1>
 
-<!-- Login Section -->
-<section id="login" class="bg-white p-5 rounded-2xl shadow-md space-y-4">
-<h2 class="text-xl text-purple-800 font-bold text-center">Admin መግቢያ</h2>
-<input id="email" type="email" autocomplete="username" placeholder="Admin Email" class="w-full p-3 rounded-lg border border-slate-300 text-black">
-<input id="password" type="password" autocomplete="current-password" placeholder="Admin Password" class="w-full p-3 rounded-lg border border-slate-300 text-black">
-<button id="adminLoginBtn" class="w-full bg-amber-500 text-black font-bold p-3 rounded-lg shadow">Admin Login</button>
-<hr class="border-slate-200">
-<h3 class="font-bold text-center text-purple-900">ተጫዋች መግቢያ</h3>
-<input id="playerName" maxlength="30" placeholder="የተጫዋች ስም (ምሳሌ: Biniyam)" class="w-full p-3 rounded-lg border border-slate-300 text-black">
-<input id="roomInput" maxlength="10" placeholder="Room Code" class="w-full p-3 rounded-lg border border-slate-300 text-black uppercase">
-<button id="joinBtn" class="w-full bg-green-600 text-white font-bold p-3 rounded-lg shadow">Join Game</button>
-</section>
+    <!-- Current Call & Recent Calls Section -->
+    <div class="flex flex-col items-center justify-center my-4 p-4 bg-purple-800 rounded-2xl shadow-lg text-white w-11/12 max-w-md mx-auto">
+        
+        <!-- Current Call Banner -->
+        <div class="flex items-center justify-between w-full bg-purple-900 rounded-xl p-4 mb-3 shadow-inner">
+            <span class="text-xl font-bold tracking-wide">Current Call</span>
+            <div id="current-call-badge" class="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center text-xl font-extrabold shadow-md animate-pulse">
+                --
+            </div>
+        </div>
 
-<!-- Game Section -->
-<section id="game" class="hidden space-y-3">
+        <!-- Recent Calls History Circles -->
+        <div class="flex items-center justify-center space-x-3 bg-purple-900/50 p-3 rounded-xl w-full">
+            <div id="recent-1" class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold shadow">--</div>
+            <div id="recent-2" class="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center text-sm font-bold shadow">--</div>
+            <div id="recent-3" class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold shadow">--</div>
+        </div>
 
-<!-- Top Stats Bar -->
-<div class="grid grid-cols-4 gap-2 text-center">
-<div class="bg-white p-2 rounded-xl shadow border border-purple-100">
-<p class="text-[11px] font-bold text-purple-900">Players</p>
-<div id="statPlayers" class="text-base font-bold text-slate-800">0</div>
-</div>
-<div class="bg-white p-2 rounded-xl shadow border border-purple-100">
-<p class="text-[11px] font-bold text-purple-900">Derash</p>
-<div id="statDerash" class="text-base font-bold text-slate-800">0</div>
-</div>
-<div class="bg-white p-2 rounded-xl shadow border border-purple-100">
-<p class="text-[11px] font-bold text-purple-900">Bet</p>
-<div id="statBet" class="text-base font-bold text-slate-800">10</div>
-</div>
-<div class="bg-white p-2 rounded-xl shadow border border-purple-100">
-<p class="text-[11px] font-bold text-purple-900">Call Count</p>
-<div id="statCallCount" class="text-base font-bold text-slate-800">0</div>
-</div>
-</div>
+        <!-- Auto Mode Switch -->
+        <div class="flex items-center justify-between w-full mt-4 bg-purple-900/70 px-4 py-3 rounded-xl">
+            <span class="text-lg font-medium">Auto</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="auto-toggle" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+            </label>
+        </div>
+    </div>
 
-<!-- Admin Panel -->
-<div id="adminPanel" class="hidden bg-white p-4 rounded-2xl shadow space-y-2 border border-amber-200">
-<h2 class="text-purple-900 font-bold text-sm">ADMIN CONTROL (Room: <span id="roomCode" class="text-amber-600">------</span>)</h2>
-<div class="grid grid-cols-2 gap-2">
-<button id="createRoomBtn" class="bg-blue-600 text-white p-2 rounded font-bold text-xs">➕ Create Room</button>
-<button id="startBtn" class="bg-green-600 text-white p-2 rounded font-bold text-xs">▶ START</button>
-<button id="callBtn" class="bg-amber-500 text-black p-2 rounded font-bold text-xs">📢 CALL NEXT</button>
-<button id="pauseBtn" class="bg-orange-500 text-white p-2 rounded font-bold text-xs">⏸ PAUSE</button>
-</div>
-<button id="resetBtn" class="w-full bg-red-600 text-white p-2 rounded font-bold text-xs">reset game</button>
-<div class="border-t border-slate-100 pt-2">
-<h3 class="font-bold text-purple-900 text-xs">Players List</h3>
-<div id="playersList" class="text-xs mt-1 max-h-28 overflow-y-auto"></div>
-</div>
-</div>
+    <!-- ዋናው የጨዋታ ማሳያ (መጫወቻው የሚቀጥልበት ቦታ) -->
+    <div id="game-container" class="w-full max-w-md bg-white p-4 rounded-2xl shadow-md mt-2">
+        <!-- የካርቴላ እና የቁጥር መጥሪያ ክፍሎች -->
+    </div>
 
-<!-- Live Game Layout -->
-<div class="grid grid-cols-12 gap-2">
-<div class="col-span-7 bg-white p-2 rounded-2xl shadow">
-<div class="grid grid-cols-5 gap-1 text-center text-[10px] font-bold text-white mb-1">
-<div class="bg-green-700 py-1 rounded">B</div>
-<div class="bg-orange-500 py-1 rounded">I</div>
-<div class="bg-blue-600 py-1 rounded">N</div>
-<div class="bg-red-600 py-1 rounded">G</div>
-<div class="bg-purple-600 py-1 rounded">O</div>
-</div>
-<div id="masterGrid" class="grid grid-cols-5 gap-1 text-center"></div>
-</div>
-
-<div class="col-span-5 flex flex-col gap-2">
-<div class="bg-purple-900 text-white p-3 rounded-2xl text-center shadow flex flex-col justify-center items-center flex-1">
-<p class="text-purple-200 text-[11px]">Current Call</p>
-<div id="currentCall" class="text-3xl font-extrabold text-amber-400 my-1">-</div>
-</div>
-<div class="bg-white p-2 rounded-2xl shadow text-center border border-purple-100">
-<p id="gameStatus" class="text-xs font-bold text-green-600">WAITING</p>
-</div>
-</div>
-</div>
-
-<!-- Player Area / Cartela -->
-<div id="playerArea" class="bg-white p-4 rounded-2xl shadow">
-<h3 class="text-purple-900 font-bold text-center text-sm mb-2">የእርስዎ CARTELA</h3>
-<div class="grid grid-cols-5 gap-1 text-center mb-2 font-bold text-xs text-white">
-<div class="bg-green-700 py-1 rounded">B</div>
-<div class="bg-orange-500 py-1 rounded">I</div>
-<div class="bg-blue-600 py-1 rounded">N</div>
-<div class="bg-red-600 py-1 rounded">G</div>
-<div class="bg-purple-600 py-1 rounded">O</div>
-</div>
-<div id="playerCard" class="grid grid-cols-5 gap-1 text-center"></div>
-<button id="claimBtn" class="w-full bg-gradient-to-r from-yellow-400 to-amber-500 text-black font-bold p-3 rounded-xl mt-3 shadow text-sm">🎉 BINGO!</button>
-<div id="bingoMessage" class="text-center text-xs text-green-600 mt-2 font-semibold"></div>
-</div>
-
-<div class="flex gap-2 pt-1">
-<button onclick="location.reload()" class="flex-1 bg-green-600 text-white font-bold py-2.5 rounded-xl shadow text-sm">Refresh</button>
-<button id="logoutBtn" class="bg-red-600 text-white font-bold px-4 py-2.5 rounded-xl shadow text-sm">Logout</button>
-</div>
-</section>
-
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyCpQVfVwK0F3oRlTeUGaxM30KnxTJExAI8",
-  authDomain: "arada-bingo-8f1f9.firebaseapp.com",
-  databaseURL: "https://arada-bingo-8f1f9-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "arada-bingo-8f1f9",
-  storageBucket: "arada-bingo-8f1f9.firebasestorage.app",
-  messagingSenderId: "367791923776",
-  appId: "1:367791923776:web:2b49837118f0de959e75a5"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
-const ADMIN_UID = "pqkVCpJeCOTpfaHTZtgqJvqkq6M2";
-
-let user=null, isAdmin=false, room=null, roomData=null, roomListener=null, playerCard=[];
-const $ = id => document.getElementById(id);
-const say = t => $("message").textContent=t;
-
-function makeCard(){
-  const ranges=[[1,15],[16,30],[31,45],[46,60],[61,75]];
-  const card=Array(25);
-  ranges.forEach((range,col)=>{
-    const nums=[];
-    while(nums.length<5){
-      const n=Math.floor(Math.random()*(range[1]-range[0]+1))+range[0];
-      if(!nums.includes(n)) nums.push(n);
-    }
-    nums.forEach((n,row)=>card[row*5+col]=n);
-  });
-  card[12]="FREE";
-  return card;
-}
-function letter(n){return n<=15?"B":n<=30?"I":n<=45?"N":n<=60?"G":"O";}
-function playSound(){
-  try{
-    const ctx=new (window.AudioContext||window.webkitAudioContext)();
-    const osc=ctx.createOscillator(), gain=ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.frequency.value=600; gain.gain.value=.1;
-    osc.start(); osc.stop(ctx.currentTime+.15);
-    osc.onended=()=>ctx.close();
-  }catch(e){}
-}
-
-const masterGrid = $("masterGrid");
-for(let r=0; r<15; r++){
-  for(let c=0; c<5; c++){
-    const num = c * 15 + r + 1;
-    const cell=document.createElement("div");
-    cell.id="m-"+num; cell.className="master-cell text-center";
-    cell.textContent=num; masterGrid.appendChild(cell);
-  }
-}
-
-function showGame(){
-  $("login").classList.add("hidden");
-  $("game").classList.remove("hidden");
-  $("adminPanel").classList.toggle("hidden",!isAdmin);
-  $("playerArea").classList.toggle("hidden",isAdmin);
-}
-async function adminLogin(){
-  try{
-    const email=$("email").value.trim(), password=$("password").value;
-    if(!email||!password){say("Email እና Password አስገባ");return;}
-    const result=await auth.signInWithEmailAndPassword(email,password);
-    if(result.user.uid!==ADMIN_UID){
-      await auth.signOut(); say("ይህ Admin መለያ አይደለም"); return;
-    }
-    user=result.user; isAdmin=true; showGame(); say("Admin ገብቷል");
-  }catch(e){say("Login Error: "+e.message);}
-}
-async function createRoom(){
-  if(!isAdmin||!user){say("Admin ብቻ ነው");return;}
-  try{
-    const code=Math.random().toString(36).slice(2,8).toUpperCase();
-    await db.ref("rooms/"+code).set({
-      adminUid:user.uid,status:"waiting",calledNumbers:[],
-      createdAt:firebase.database.ServerValue.TIMESTAMP,winner:null,players:{}
-    });
-    room=code; listenRoom(); say("Room: "+code);
-  }catch(e){say("Error: "+e.message);}
-}
-async function joinRoom(){
-  try{
-    const name=$("playerName").value.trim();
-    const code=$("roomInput").value.trim().toUpperCase();
-    if(!name||!code){say("ስም እና Room Code አስገባ");return;}
-    const result=await auth.signInAnonymously();
-    user=result.user; isAdmin=false;
-    const roomRef=db.ref("rooms/"+code);
-    const snap=await roomRef.once("value");
-    if(!snap.exists()){await auth.signOut();say("Room አልተገኘም");return;}
-    room=code;
-    const playerRef=roomRef.child("players/"+user.uid);
-    const old=await playerRef.once("value");
-    playerCard=(old.exists()&&Array.isArray(old.val().card))?old.val().card:makeCard();
-    await playerRef.update({name,card:playerCard,joinedAt:firebase.database.ServerValue.TIMESTAMP,bingoClaim:false});
-    showGame(); listenRoom(); say("ገብተሃል!");
-  }catch(e){say("Error: "+e.message);}
-}
-function hasBingo(card,called){
-  if(!Array.isArray(card)||card.length!==25)return false;
-  const lines=[];
-  for(let r=0;r<5;r++)lines.push([0,1,2,3,4].map(c=>r*5+c));
-  for(let c=0;c<5;c++)lines.push([0,1,2,3,4].map(r=>r*5+c));
-  lines.push([0,6,12,18,24],[4,8,12,16,20]);
-  return lines.some(line=>line.every(i=>card[i]==="FREE"||called.includes(card[i])));
-}
-function renderCard(called=[]){
-  if(!playerCard.length)return;
-  $("playerCard").innerHTML="";
-  playerCard.forEach(num=>{
-    const cell=document.createElement("div");
-    cell.className="bingo-cell text-xs py-2";
-    if(num==="FREE"||called.includes(num))cell.classList.add("marked");
-    cell.textContent=num; $("playerCard").appendChild(cell);
-  });
-}
-function renderPlayers(players){
-  const list=$("playersList"); list.innerHTML="";
-  const entries = Object.entries(players||{});
-  $("statPlayers").textContent = entries.length;
-  $("statDerash").textContent = entries.length * 10 * 8;
-  entries.forEach(([uid,p])=>{
-    const item=document.createElement("div");
-    item.className="border-b border-slate-100 py-1.5 flex justify-between items-center text-xs";
-    const name=document.createElement("span"); name.textContent=p.name||"Player";
-    const status=document.createElement("span");
-    if(p.bingoClaim&&hasBingo(p.card||[],roomData.calledNumbers||[])){
-      status.textContent="🏆 BINGO";status.className="text-green-600 font-bold";
-    }else if(p.bingoClaim){
-      status.textContent="❌ Invalid";status.className="text-red-600 font-bold";
-    }else{
-      status.textContent="Playing";status.className="text-slate-500";
-    }
-    item.append(name,status);list.appendChild(item);
-  });
-  if(!entries.length)list.textContent="ማንም አልገባም";
-}
-function listenRoom(){
-  if(!room)return;
-  if(roomListener)db.ref("rooms/"+room).off("value",roomListener);
-  roomListener=snap=>{
-    roomData=snap.val();
-    if(!roomData){say("Room ተሰርዟል");return;}
-    $("roomCode").textContent=room;
-    $("gameStatus").textContent=(roomData.status||"waiting").toUpperCase();
-    const called=roomData.calledNumbers||[];
-    $("statCallCount").textContent = called.length;
-    const playerCount = Object.keys(roomData.players||{}).length;
-    $("statPlayers").textContent = playerCount;
-    $("statDerash").textContent = playerCount * 10 * 8;
-    
-    $("currentCall").textContent=called.length?letter(called[called.length-1])+"-"+called[called.length-1]:"-";
-    
-    for(let i=1;i<=75;i++){
-      const el = $("m-"+i);
-      el.classList.remove("called", "latest");
-      if(called.includes(i)){
-        if(i === called[called.length-1]) el.classList.add("latest");
-        else el.classList.add("called");
-      }
-    }
-    if(!isAdmin)renderCard(called);
-    else renderPlayers(roomData.players||{});
-    $("startBtn").disabled=roomData.status==="playing";
-    $("callBtn").disabled=roomData.status!=="playing"||called.length>=75;
-  };
-  db.ref("rooms/"+room).on("value",roomListener);
-}
-async function startGame(){
-  if(!isAdmin||!room)return;
-  try{await db.ref("rooms/"+room).update({status:"playing"});say("ተጀምሯል");}catch(e){say(e.message);}
-}
-async function callNumber(){
-  if(!isAdmin||!room||!roomData)return;
-  const called=roomData.calledNumbers||[];
-  const remaining=Array.from({length:75},(_,i)=>i+1).filter(n=>!called.includes(n));
-  if(!remaining.length){say("ሁሉም ተጠርተዋል");return;}
-  const next=remaining[Math.floor(Math.random()*remaining.length)];
-  try{await db.ref("rooms/"+room).update({calledNumbers:[...called,next]});playSound();}catch(e){say(e.message);}
-}
-async function pauseGame(){
-  if(!isAdmin||!room)return;
-  try{await db.ref("rooms/"+room).update({status:"paused"});}catch(e){say(e.message);}
-}
-async function resetGame(){
-  if(!isAdmin||!room||!confirm("RESET?"))return;
-  try{
-    const players=roomData.players||{}, updates={};
-    Object.keys(players).forEach(uid=>updates["players/"+uid+"/bingoClaim"]=false);
-    updates.status="waiting";updates.calledNumbers=[];updates.winner=null;
-    await db.ref("rooms/"+room).update(updates);$("bingoMessage").textContent="";
-  }catch(e){say(e.message);}
-}
-async function claimBingo(){
-  if(isAdmin||!room||!roomData||!user)return;
-  const called=roomData.calledNumbers||[];
-  if(roomData.status!=="playing"||!hasBingo(playerCard,called)){
-    $("bingoMessage").textContent="እስካሁን BINGO አልሆነም።";return;
-  }
-  try{
-    await db.ref("rooms/"+room+"/players/"+user.uid).update({bingoClaim:true});
-    $("bingoMessage").textContent="BINGO ጥያቄ ተልኳል!";
-  }catch(e){$("bingoMessage").textContent="Error: "+e.message;}
-}
-async function logout(){
-  if(room&&roomListener)db.ref("rooms/"+room).off("value",roomListener);
-  try{await auth.signOut();}finally{location.reload();}
-}
-$("adminLoginBtn").addEventListener("click",adminLogin);
-$("joinBtn").addEventListener("click",joinRoom);
-$("createRoomBtn").addEventListener("click",createRoom);
-$("startBtn").addEventListener("click",startGame);
-$("callBtn").addEventListener("click",callNumber);
-$("pauseBtn").addEventListener("click",pauseGame);
-$("resetBtn").addEventListener("click",resetGame);
-$("claimBtn").addEventListener("click",claimBingo);
-$("logoutBtn").addEventListener("click",logout);
-$("roomInput").addEventListener("input",e=>e.target.value=e.target.value.toUpperCase());
-</script>
 </body>
 </html>
+
